@@ -20,23 +20,29 @@ $pn=strtolower(trim($r["Body"]));
 $from=explode(":",$r["From"])[1];
 $from=trim(str_replace('+','',$from));
 $next_action=$c->query("select next_action from `edu`.`x_comm_progression` where mobile='$from' order by id DESC limit 1")[0]['next_action'];
+file_put_contents("f_current_before.txt",$next_action);
+
+// echo "
+	// <Response>
+		// <Message>Under Maintenance. Building Conditional Offer Letter and verifying all functionality. Try Later.</Message>
+	// </Response>";		
+// exit;
 if ($pn=='reset') {
-	$from=explode(":",$r["From"])[1];
-	$from=trim(str_replace('+','',$from));
 	echo "
 	<Response>
 		<Message>Application was reset successfully! To restart process, please upload a pdf or a picture of your passport (first page)...</Message>
 	</Response>";		
-	$student_id=$c->query("select variable_value from x_comm_variable_store where mobile='$from' and variable_name='student_id' LIMIT 1")[0]['variable_value'];
+	$student_id=get_var('student_id');
 	$c->insert("delete from x_comm_progression where mobile='$from'");
 	$c->insert("delete from x_comm_variable_store where mobile='$from'");
 	$c->insert("delete from x_comm_courses_displayed where mobile='$from'");
 	$c->insert("delete from x_raw_scores where student_id='$student_id'");
 	$c->insert("delete from student_registration where mobile='$from'");
-
 	$next_action="first_page";
-	if (!empty(trim($from))) $c->insert("INSERT INTO `edu`.`x_comm_progression` (`mobile`, `next_action`) VALUES ('$from', '$next_action')");
+	$c->insert("INSERT INTO `edu`.`x_comm_progression` (`mobile`, `next_action`) VALUES ('$from', '$next_action')");
 } else if ($pn=='upload') {
+	$student_id=get_var('student_id');
+	$c->insert("INSERT INTO `edu`.`x_comm_progression` (`mobile`, `next_action`) VALUES ('$from', '$student_id')");
 	$c->insert("delete from x_comm_progression where mobile='$from' and next_action='showing_courses'");
 	$c->insert("delete from x_comm_progression where mobile='$from' and next_action='show'");
 	$c->insert("delete from x_comm_courses_displayed where mobile='$from'");
@@ -161,36 +167,42 @@ Please start by uploading the first page of your passport!
 				for ($j=0; $j<count($address1); $j++) {
 					$add1.=$address1[$j]['content'] . " ";
 				}
-			
+		//		$address1=$add1;
+				
 				$address2=$data['address2']['values'];
 				$add2="";
 				for ($j=0; $j<count($address2); $j++) {
 					$add2.=$address2[$j]['content'] . " ";
 				}
+		//		$address2=$add2;
 
 				$address3=$data['address3']['values'];
 				$add3="";
 				for ($j=0; $j<count($address3); $j++) {
 					$add3.=$address3[$j]['content'] . " ";
 				}
+			//	$address3=$add3;
 
 				$fathers_name=$data['name']['values'];
 				$fn="";
 				for ($j=0; $j<count($fathers_name); $j++) {
 					$fn.=$fathers_name[$j]['content'] . " ";
 				}
+		//		$fathers_name=$fn;
 				
 				$mothers_name=$data['spouse']['values'];
 				$mn="";
 				for ($j=0; $j<count($mothers_name); $j++) {
 					$mn.=$mothers_name[$j]['content'] . " ";
 				}
+		//		$mothers_name=$mn;
 
 				$file_no=$data['file']['values'];
 				$fl="";
 				for ($j=0; $j<count($file_no); $j++) {
 					$fl.=$file_no[$j]['content'] . " ";
 				}
+		//		$file_no=$fl;
 
 				$c->insert("INSERT INTO `edu`.`x_comm_variable_store` (`mobile`, `variable_name`, `variable_value`) VALUES ('$from', 'fathers_name', '$fn')");
 				$c->insert("INSERT INTO `edu`.`x_comm_variable_store` (`mobile`, `variable_name`, `variable_value`) VALUES ('$from', 'mothers_name', '$mn')");
@@ -219,33 +231,89 @@ Please start by uploading the first page of your passport!
 				}
 			}
 		} else if ($next_action=="request_location") {
-			$board=$r["Body"];
-			$c->insert("INSERT INTO `edu`.`x_comm_variable_store` (`mobile`, `variable_name`, `variable_value`) VALUES ('$from', 'board', '$board')");
-			$lx=$c->query("select show_location from x_show_locations group by show_location");
-			$sStr="
-			<Response>
-				<Message>
-					 \r\n Please Select your Preferred City where you would like to attend college \r\n \r\n";
-						for ($x=0; $x<count($lx); $x++) {
-							$loc[]=$lx[$x]['show_location'];
+			$board=strtolower(trim($r["Body"]));
+			$board_str="";
+			$board=trim(strtolower(str_replace(array(".",",","-","(",")"),"",$r["Body"])));
+			$b=$c->query("select board from x_boards where board='$board' or board_a='$board'");
+			if ($board !== strtolower(str_replace(array(".",",","-","(",")"),"",$b[0]['board']))) {
+				if (is_numeric(trim($board))) {
+					del_var('board_selected');
+					set_var('board_selected',$board);
+					$sel_board=json_decode(get_var('boards'),true)[trim($board)*1-1];
+					if ($sel_board!=="") {
+						$c->insert("INSERT INTO `edu`.`x_comm_variable_store` (`mobile`, `variable_name`, `variable_value`) VALUES ('$from', 'board', '$sel_board')");
+						$lx=$c->query("select show_location from x_show_locations group by show_location");
+						$sStr="
+						<Response>
+							<Message>
+								 \r\n Please Select your Preferred City where you would like to attend college \r\n \r\n";
+									for ($x=0; $x<count($lx); $x++) {
+										$loc[]=$lx[$x]['show_location'];
+									}
+									for ($x=0; $x<count($loc); $x++) {
+										$sStr.=($x+1) . ". " . $loc[$x] . "\r\n" ;
+									}
+							$sStr.="Reply with selection (1 - " . (count($loc)) . ")
+							</Message>
+						</Response>";	
+						echo $sStr;
+						$next_action="request_email";
+						$c->insert("INSERT INTO `edu`.`x_comm_progression` (`mobile`, `next_action`) VALUES ('$from', '$next_action')");
+					}
+				} else {
+					$b1=$c->query("select * from x_boards where trim(`board`) LIKE '$board%'");
+					if (count($b1)>5) {
+							echo "<Response>
+								<Message>That was too broad. Please more specific.</Message>
+							</Response>";				
+					} else {
+						if (count($b1)>0) {
+							for ($x=0; $x<count($b1); $x++) {
+								$board_str=ltrim($board_str) . ($x+1) . ". " . trim($b1[$x]['board']) . "\r\n";
+								$bx[]=$b1[$x]['board'];
+							}
+							del_var('boards');
+							set_var('boards',json_encode($bx));
+							echo "<Response>
+								<Message>Based on your input, we found the following boards:\r\n\r\n$board_str\r\nPlease select one by replying with a number (1,2,3 or the board name)</Message>
+							</Response>";
+						} else {
+							echo "<Response>
+								<Message>No match found. Try again please.</Message>
+							</Response>";
 						}
-						for ($x=0; $x<count($loc); $x++) {
-							$sStr.=($x+1) . ". " . $loc[$x] . "\r\n" ;
-						}
-				$sStr.="Reply with selection (1 - " . (count($loc)+1) . ")
-				</Message>
-			</Response>";	
-			echo $sStr;
-			$next_action="request_email";
-			$c->insert("INSERT INTO `edu`.`x_comm_progression` (`mobile`, `next_action`) VALUES ('$from', '$next_action')");
-
+					}
+				}
+			} else {
+				$sel_board=$board;
+				del_var('board_selected');
+				set_var('board_selected',$board);
+				$c->insert("INSERT INTO `edu`.`x_comm_variable_store` (`mobile`, `variable_name`, `variable_value`) VALUES ('$from', 'board', '$sel_board')");
+				$lx=$c->query("select show_location from x_show_locations group by show_location");
+				$sStr="
+				<Response>
+					<Message>
+						 \r\n Please Select your Preferred City where you would like to attend college \r\n \r\n";
+							for ($x=0; $x<=count($lx); $x++) {
+								$loc[]=$lx[$x]['show_location'];
+							}
+							for ($x=0; $x<count($loc); $x++) {
+								$sStr.=($x+1) . ". " . $loc[$x] . "\r\n" ;
+							}
+					$sStr.="Reply with selection (1 - " . (count($loc)-1) . ")
+					</Message>
+				</Response>";	
+				echo $sStr;
+				$next_action="request_email";
+				$c->insert("INSERT INTO `edu`.`x_comm_progression` (`mobile`, `next_action`) VALUES ('$from', '$next_action')");
+			}
 		} else if ($next_action=="request_email") {
 			$lx=$c->query("select show_location from x_show_locations group by show_location");
 			for ($x=0; $x<count($lx); $x++) {
 				$loc[]=$lx[$x]['show_location'];
 			}
 			$location=trim($r["Body"]);
-			$locx=$loc[$location*1-1];
+			$locx=$loc[$location*1];
 			$c->insert("INSERT INTO `edu`.`x_comm_variable_store` (`mobile`, `variable_name`, `variable_value`) VALUES ('$from', 'location', '$locx')");
 			echo "
 			<Response>
@@ -326,7 +394,7 @@ Please start by uploading the first page of your passport!
 						$c->insert("INSERT INTO `edu`.`x_comm_variable_store` (`mobile`, `variable_name`, `variable_value`) VALUES ('$from', 'score_speaking', '$score_speaking')");
 						$c->insert("INSERT INTO `edu`.`x_comm_variable_store` (`mobile`, `variable_name`, `variable_value`) VALUES ('$from', 'score_overall', '$score_overall')");
 
-						$next_action="passing_year";
+						$next_action="year_10th_passing";
 						$c->insert("INSERT INTO `edu`.`x_comm_progression` (`mobile`, `next_action`) VALUES ('$from', '$next_action')");
 
 				} else {
@@ -338,12 +406,12 @@ Please start by uploading the first page of your passport!
 						</Response>";	
 				}
 			
-		} else if ($next_action=="passing_year") {
+		} else if ($next_action=="year_10th_passing") {
 			/*
 				Call OCR Mindee
 			*/
-			$year_passed=$pn;
-			$c->insert("INSERT INTO `edu`.`x_comm_variable_store` (`mobile`, `variable_name`, `variable_value`) VALUES ('$from', 'year_10th_passing', '$year_passing')");
+			$year_10th_passing=$pn;
+			set_var('year_10th_passing',trim($pn));
 			$next_action="process_marksheet";
 			$c->insert("INSERT INTO `edu`.`x_comm_progression` (`mobile`, `next_action`) VALUES ('$from', '$next_action')");
 			echo "<Response>
@@ -378,9 +446,10 @@ Please start by uploading the first page of your passport!
 
 			$d=json_decode($m,true);
 
-			$dated=$d['document']['inference']['pages'][0]['prediction']['dated']['values'][0]['content'];
-			$c->insert("INSERT INTO `edu`.`x_comm_variable_store` (`mobile`, `variable_name`, `variable_value`) VALUES ('$from', 'year_12th_passing', '$dated')");
-
+			$year_12th_passing=$d['document']['inference']['pages'][0]['prediction']['dated']['values'][0]['content'];
+			$c->insert("INSERT INTO `edu`.`x_comm_variable_store` (`mobile`, `variable_name`, `variable_value`) VALUES ('$from', 'year_12th_passing', '$year_12th_passing')");
+			set_var('year_12th_passing',trim($year_12th_passing));
+			
 			$content1=$d['document']['inference']['pages'][0]['prediction']['sub1']['values'];
 			file_put_contents('ocrRaw.txt',file_get_contents('ocrRaw.txt') . PHP_EOL . json_encode($content1));
 			$sub1='';
@@ -493,8 +562,6 @@ Please start by uploading the first page of your passport!
 				$stp[]=$c->query("select * from `x_subjects_progression` where `id`='$subject_id' and `board_id`='14'")[0]['subject_type'];
 				$marks=$total[$i];
 				$xid[]=$c->insert("INSERT INTO `edu`.`x_raw_scores` (`student_id`, `subject_id`, `score`, `max`, `board_id`, `grade`, `subject_type`, `board_level`) VALUES ('$student_id', '$subject_id', '$marks', 100, '$board_id', '12', '', '2')");
-				$c->insert("INSERT INTO `edu`.`x_comm_variable_store` (`mobile`, `variable_name`, `variable_value`) VALUES ('$from', '$subject', '$marks')");
-
 			}
 			/*
 				Now Generate x_matrix link with student_id, fetch it, then parse and show progression subjects
@@ -504,17 +571,35 @@ Please start by uploading the first page of your passport!
 			$from=str_replace('+','',$from);
 			shell_exec("curl 'https://terrawire.com/edu/x_matrix.php?student_id=$student_id&mobile=$from&xids=$xids&stps=$stps' > /dev/null &");
 			$strOp="";
+			$year_10th_passing=get_var('year_10th_passing')*1;
+			$year_12th_passing=get_var('year_12th_passing')*1;
+			$gap=$year_12th_passing*1-$year_10th_passing*1;
+			set_var('10th_to_12th_gap',$gap);
 echo "
 <Response>
 	<Message>Based on your marksheet and location preferences, we found multiple qualifying courses in which you are very likely to get admission. \r\n\r\nTo see your matches, Click link below. \r\n\r\nYou will need to login to your student portal. Your Credentials:\r\n\r\n*Login*: $email\r\n*Password*: $from\r\n*URL*:https://admitid.com/signin?" . base64_encode("$email|$from|$student_id") . "\r\n\r\nLogin to view courses now!</Message>
 </Response>";
-	}
+			
+			}
 	}
 }
 
-function fetch_variable($var) {
+function get_var($var) {
 	global $c;
 	return $c->query("select variable_value from x_comm_variable_store where mobile='$from' and variable_name='$var'")[0]['variable_value'];
+}
+
+function set_var($var,$val) {
+	global $c;
+	global $from;
+	del_var($var);
+	$c->insert("INSERT INTO `edu`.`x_comm_variable_store` (`mobile`, `variable_name`, `variable_value`) VALUES ('$from', '$var', '$val')");
+}
+
+function del_var($var) {
+	global $c;
+	global $from;
+	$c->insert("DELETE FROM `edu`.`x_comm_variable_store` WHERE `mobile`='$from' and `variable_name`='$var'");
 }
 
 function reset_all() {
