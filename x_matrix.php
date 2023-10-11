@@ -422,6 +422,7 @@
 		global $c;
 		$eid=$c->query("select eid from x_course_eligibility where ucdc_id='$ucdc_id'")[0]['eid'];
 		$el=$c->query("select * from x_eligibility where eid='$eid'");
+		$pass=true;
 		/*
 			Get IELTS Results from x_comm_variable_store table and compare with values from eligibility table
 		*/
