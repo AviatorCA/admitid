@@ -20,13 +20,6 @@ $pn=strtolower(trim($r["Body"]));
 $from=explode(":",$r["From"])[1];
 $from=trim(str_replace('+','',$from));
 $next_action=$c->query("select next_action from `edu`.`x_comm_progression` where mobile='$from' order by id DESC limit 1")[0]['next_action'];
-file_put_contents("f_current_before.txt",$next_action);
-
-// echo "
-	// <Response>
-		// <Message>Under Maintenance. Building Conditional Offer Letter and verifying all functionality. Try Later.</Message>
-	// </Response>";		
-// exit;
 if ($pn=='reset') {
 	$from=explode(":",$r["From"])[1];
 	$from=trim(str_replace('+','',$from));
@@ -168,42 +161,36 @@ Please start by uploading the first page of your passport!
 				for ($j=0; $j<count($address1); $j++) {
 					$add1.=$address1[$j]['content'] . " ";
 				}
-		//		$address1=$add1;
-				
+			
 				$address2=$data['address2']['values'];
 				$add2="";
 				for ($j=0; $j<count($address2); $j++) {
 					$add2.=$address2[$j]['content'] . " ";
 				}
-		//		$address2=$add2;
 
 				$address3=$data['address3']['values'];
 				$add3="";
 				for ($j=0; $j<count($address3); $j++) {
 					$add3.=$address3[$j]['content'] . " ";
 				}
-			//	$address3=$add3;
 
 				$fathers_name=$data['name']['values'];
 				$fn="";
 				for ($j=0; $j<count($fathers_name); $j++) {
 					$fn.=$fathers_name[$j]['content'] . " ";
 				}
-		//		$fathers_name=$fn;
 				
 				$mothers_name=$data['spouse']['values'];
 				$mn="";
 				for ($j=0; $j<count($mothers_name); $j++) {
 					$mn.=$mothers_name[$j]['content'] . " ";
 				}
-		//		$mothers_name=$mn;
 
 				$file_no=$data['file']['values'];
 				$fl="";
 				for ($j=0; $j<count($file_no); $j++) {
 					$fl.=$file_no[$j]['content'] . " ";
 				}
-		//		$file_no=$fl;
 
 				$c->insert("INSERT INTO `edu`.`x_comm_variable_store` (`mobile`, `variable_name`, `variable_value`) VALUES ('$from', 'fathers_name', '$fn')");
 				$c->insert("INSERT INTO `edu`.`x_comm_variable_store` (`mobile`, `variable_name`, `variable_value`) VALUES ('$from', 'mothers_name', '$mn')");
@@ -480,7 +467,6 @@ Please start by uploading the first page of your passport!
 			/*
 				Now Create new student ID by inserting in student_reg table
 			*/
-		//	$passwd=base64_encode($mobile);
 			$email=$c->query("select variable_value from x_comm_variable_store where mobile='$from' and variable_name='email'")[0]['variable_value'];
 			$c->insert("delete from student_registration where mobile='$from'");
 			$student_id=$c->insert("INSERT INTO `edu`.`student_registration` (`email`, `mobile`, `fname`,`pswd`) VALUES ('$email', '$from', '$name','$from')");
@@ -503,31 +489,11 @@ Please start by uploading the first page of your passport!
 				if ($subject=="business accountancy") $subject="accountancy";
 				$subject=str_replace("accountancy","",strtolower($subject));
 				if ($subject=="") $subject="accountancy";
-				
 				$subject_id=$c->query("select * from x_subjects_progression where `subject`='$subject' and `board_id`='14'")[0]['id'];
-
 				$stp[]=$c->query("select * from `x_subjects_progression` where `id`='$subject_id' and `board_id`='14'")[0]['subject_type'];
-
 				$marks=$total[$i];
-				// try {
-					// if ($st=='A') {
-						// $c->insert("INSERT INTO `edu`.`x_raw_scores` (`student_id`, `subject_id`, `score`, `max`, `board_id`, `grade`, `subject_type`, `board_level`) VALUES ('$student_id', '$subject_id', '$marks', 100, '$board_id', '12', 'A', '2')");
-					// }
-					// if ($st=='L') {
-						// $c->insert("INSERT INTO `edu`.`x_raw_scores` (`student_id`, `subject_id`, `score`, `max`, `board_id`, `grade`, `subject_type`, `board_level`) VALUES ('$student_id', '$subject_id', '$marks', 100, '$board_id', '12', 'L', '2')");
-					// }
-					// if ($st=='N') {
-						
-					// }
-				// catch (customException $e) {
-					
-				// }
 				$xid[]=$c->insert("INSERT INTO `edu`.`x_raw_scores` (`student_id`, `subject_id`, `score`, `max`, `board_id`, `grade`, `subject_type`, `board_level`) VALUES ('$student_id', '$subject_id', '$marks', 100, '$board_id', '12', '', '2')");
-				// if ($st=='L') $c->insert("INSERT INTO `edu`.`x_raw_scores` (`student_id`, `subject_id`, `score`, `max`, `board_id`, `grade`, `subject_type`, `board_level`) VALUES ('$student_id', '$subject_id', '$marks', 100, '$board_id', '12', 'L', '2')");
-				// if ($st=='N') $c->insert("INSERT INTO `edu`.`x_raw_scores` (`student_id`, `subject_id`, `score`, `max`, `board_id`, `grade`, `subject_type`, `board_level`) VALUES ('$student_id', '$subject_id', '$marks', 100, '$board_id', '12', 'N', '2')");
-				//$c->insert("UPDATE `edu`.`x_raw_scores` SET `subject_type`='$st' where id=$xid");
 				$c->insert("INSERT INTO `edu`.`x_comm_variable_store` (`mobile`, `variable_name`, `variable_value`) VALUES ('$from', '$subject', '$marks')");
-				//file_put_contents('ocrQ.txt', file_get_contents("ocrQ.txt") . "INSERT INTO `edu`.`x_raw_scores` (`student_id`, `subject_id`, `score`, `max`, `board_id`, `grade`, `subject_type`, `board_level`) VALUES ('$student_id', '$subject_id', '$marks', 100, '$board_id', '12', '$st', '2')" . PHP_EOL);
 
 			}
 			/*
@@ -538,138 +504,11 @@ Please start by uploading the first page of your passport!
 			$from=str_replace('+','',$from);
 			shell_exec("curl 'https://terrawire.com/edu/x_matrix.php?student_id=$student_id&mobile=$from&xids=$xids&stps=$stps' > /dev/null &");
 			$strOp="";
-			//$rc=$pro["reccomended_courses"];
-			// $location=$c->query("select variable_value from x_comm_variable_store where mobile='$from' and variable_name='location'")[0]['variable_value'];
-			//$total_courses=$c->query("select count(*) as 'total' from x_comm_courses_displayed where mobile='$from'")[0]['total'];
-			// file_put_contents("w_new.txt","select count(location) as 'total' from x_comm_courses_displayed where mobile='$from' and location='$location'");
-			// $strOp1="";
-			// $best_of_4=$pro['student_info']['scores']['best_of_4']['average'];
-			// $c->insert("INSERT INTO `edu`.`x_comm_variable_store` (`mobile`, `variable_name`, `variable_value`) VALUES ('$from', 'best_of_4', '$best_of_4')");
-			// // for ($i=0; $i<$step; $i++) { 
-				// // $strOp1.=$rc[$i];
-			// // }
-
-			// $strOp1="To see all courses click link below. You will be asked to login. Your login is your email address and your password is your mobile number (with country code) that we will pre-populate for you\r\n\r\n";
-			// $enc=base64_encode("email=$email");
-			// $strOp1.="https://admitid.com/signin?$enc";
-					
-			//$next_action="showe";
-			// $c->insert("INSERT INTO `edu`.`x_comm_progression` (`mobile`, `next_action`) VALUES ('$from', '$next_action')");
-			// $c->insert("INSERT INTO `edu`.`x_comm_variable_store` (`mobile`, `variable_name`, `variable_value`) VALUES ('$from', 'current', '0')");
-			// $c->insert("INSERT INTO `edu`.`x_comm_variable_store` (`mobile`, `variable_name`, `variable_value`) VALUES ('$from', 'total', '$total_courses')");
 echo "
 <Response>
 	<Message>Based on your marksheet and location preferences, we found multiple qualifying courses in which you are very likely to get admission. \r\n\r\nTo see your matches, Click link below. \r\n\r\nYou will need to login to your student portal. Your Credentials:\r\n\r\n*Login*: $email\r\n*Password*: $from\r\n*URL*:https://admitid.com/signin?" . base64_encode("$email|$from|$student_id") . "\r\n\r\nLogin to view courses now!</Message>
 </Response>";
 	}
-	file_put_contents("_url.txt","$email|$from|$student_id");
-		// } else if ($next_action=="show") {
-			// $from=str_replace('+','',$from);
-			// $current=$c->query("select variable_value from x_comm_variable_store where mobile='$from' and variable_name='current'")[0]['variable_value'];
-			// $pn=trim($r["Body"]);
-			// if ($pn=='upload') {
-				// re_upload();
-			// } else {
-				// if ($pn=='reset') {
-					// reset_all();
-				// } else {
-					// $total_courses=$c->query("select variable_value from x_comm_variable_store where mobile='$from' and variable_name='total' LIMIT 1")[0]['variable_value'];
-					// //file_put_contents("f_total_courses.txt",$total_courses);
-
-					// if ($pn=='next' || $pn=='n') {
-						// if (($current*1+$step)<=$total_courses*1) {
-							// $current=$current*1+$step;
-						// } else {
-							// $current=$total_courses*1-$step;
-						// }
-					// } else if ($pn=="prev" || $pn=="p") {
-						// if ($current*1>=$step) {
-							// $current=$current*1-$step;
-						// } else {
-							// $current=0;
-						// }
-					// } else if ($pn=='upload') {
-						// re_upload();
-					// }
-					
-					// $reccomended_courses=$c->query("select * from x_comm_courses_displayed where mobile='$from' and location='$location' order by id ASC LIMIT $current, $step");
-					// $strOp="Total Courses Found: $total_courses\r\n\r\n";
-					// for ($i=0; $i<$step; $i++) {
-						// $last_course=$c->query("select variable_value from x_comm_variable_store where mobile='$from' and variable_name='last_course' LIMIT 1")[0]['variable_value'];
-						// $course_name=$reccomended_courses[$i]['course'];
-						// if ($last_course !== $course_name) {
-							// $strOp.="* " . ($current*1+1+$i) . ". " . $course_name . "* \r\n";
-							// $strOp.="\r\n" . $reccomended_courses[$i]['course_txt']; 
-							// $strOp.="Ready to Apply? Send Msg '*Apply " . ($current*1+1+$i) . "*' to apply for this course\r\n\r\n";
-						// } else {
-							// $strOp.=$reccomended_courses[$i]['course_txt'];	
-							// $strOp.="Ready to Apply? Send Msg '*Apply " . ($current*1+1+$i) . "*' to apply for this course\r\n\r\n";
-						// }
-						// $c->insert("delete from x_comm_variable_store where mobile='$from' and `variable_name`='last_course'");
-						// $c->insert("INSERT INTO `edu`.`x_comm_variable_store` (`mobile`, `variable_name`, `variable_value`) VALUES ('$from', 'last_course', '$course_name')");
-					// }
-
-					// if ($current*1>=$step) {
-						// $prev="For the *Previous $step* listings, reply: '*prev*' or '*P*'";
-					// }
-					// if (($current*1+$step)<=$total_courses*1) {
-						// $next="For the *Next $step* listings, reply: '*next*' or '*N*'";
-					// }
-					// $strOp="Hello";
-					// $c->insert("UPDATE `edu`.`x_comm_variable_store` set variable_value='$current' where mobile='$from' and variable_name='current'");
-					// echo "
-					// <Response>
-						// <Message>$strOp</Message>
-					// </Response>";	
-					// $next_action="showing_courses";
-					// $c->insert("INSERT INTO `edu`.`x_comm_progression` (`mobile`, `next_action`) VALUES ('$from', '$next_action')");
-				// }
-			// }
-		// } else if ($next_action=="showing_courses") {
-			// $from=str_replace('+','',$from);
-			// //$current=$c->query("select variable_value from x_comm_variable_store where mobile='$from' and variable_name='current'")[0]['variable_value'];
-			// file_put_contents("f_current_before.txt","10001");
-			// $pn=strtolower(trim($r["Body"]));
-			// if ($pn=='upload') {
-				// re_upload();
-			// } else {
-				// if ($pn=='reset') {
-					// reset_all();
-				// } else {
-					// file_put_contents("f_current_before.txt","10002");
-					// // file_put_contents("f_current_before1.txt","2");
-					// // $total_courses=$c->query("select variable_value from x_comm_variable_store where mobile='$from' and variable_name='total' LIMIT 1")[0]['variable_value'];
-					// // $rc=$c->query("select * from x_comm_student_progression where mobile='$from' order by `order` ASC");
-					// // file_put_contents("f_current_before20.txt",json_encode($rc));
-					 // // for ($i=0; $i<count($rc); $i++) {
-						// // $ps=$rc[$i]['progression_subject'];
-						// // $rc1=$c->query("select * from x_comm_courses_displayed where mobile='$from' and course='$ps' order by `cost` DESC LIMIT 100");
-					// // }
-					// $rc1=$c->query("select * from x_comm_courses_displayed where mobile='$from' order by `cost` DESC");
-					// $strOp="Total Courses Found: $total_courses\r\n\r\nShowing you  a few";
-					// file_put_contents("f_current_before300.txt",json_encode($rc1));
-					// file_put_contents("f_current_before.txt","10003");
-					// // for ($i=0; $i<count($rc1); $i++) {
-							// // $strOp.=($i+1);
-							// // // $strOp.="\r\n" . $rc1[$i]['university'];
-							// // // $strOp.="\r\n" . $rc1[$i]['link'];
-							// // // $strOp.="\r\n" . $rc1[$i]['cost'];
-					// // }
-					// echo "
-					// <Response>
-						// <Message>$strOp</Message>
-					// </Response>";
-					// file_put_contents("f_current_before40.txt","5");
-					// $strOp.="\r\n\r\nTo see all courses click link below. You will be asked to login. Your login is your email address and your password is your mobile number (with country code) that we will pre-populate for you\r\n\r\n";
-					// $enc=base64_encode("email=$email");
-					// $strOp.="\r\n\r\nhttps://admitnow.co/signin?$enc";
-					// file_put_contents("f_current_before5.txt","60");
-					// file_put_contents("f_current_before70.txt","7");
-				// }
-			// }
-		// } else if ($next_action=="apply") {
-			
-		// }
 	}
 }
 
